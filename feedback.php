@@ -1,3 +1,9 @@
+<!-- db connection -->
+<?php 
+    require_once "login.php";
+?>
+
+<!-- sever-side validation -->
 <?php 
     $nameErr = $emailErr = $commentErr = "";
     $name = $email = $comment = "";
@@ -27,9 +33,21 @@
         }
 
         if(empty($nameErr) && empty($emailErr) && empty($commentErr)) {
-            $success = true;
-        }
+            
+            try {
+                $stmt = $pdo->prepare("INSERT INTO feedback(name, email, comment) VALUES (?, ?, ?)");
+                $stmt->execute([$name, $email, $comment]);
 
+                $success = true;
+
+                $name = $email = $comment = "";
+                
+            } catch (PDOException $e) {
+                $success = false;
+                $nameErr = "Error while saving feedback, Please try again";
+            }
+
+        }
     }
 
 
@@ -45,7 +63,7 @@
 </head>
 <body>
     <form method="POST" action="feedback.php">
-        <header><h1>FeedBack Form</h1></header><hr>
+        <hr><header><h1>FeedBack Form</h1></header><hr>
 
         <table>
             <tr>
@@ -87,6 +105,7 @@
         ?>
     </form>
 
+    <!-- Client side validation -->
     <script>
         document.querySelector("form").addEventListener("submit", validation);
 
@@ -118,5 +137,38 @@
             return true;
         }
     </script>
+
+    <!-- Previous feedback table -->
+    <hr><h2>Previous Feedback</h2><hr>
+    <?php 
+        try {
+            $stmt = $pdo->query("SELECT * FROM feedback ORDER BY submitted_at DESC");
+            $feedbacks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if(count($feedbacks) > 0) {
+                echo "<table border='1' cellpadding='10'>";
+                echo "<tr><th>Name</th><th>Email</th><th>Comment</th><th>Date Submitted</th><tr>";
+                
+                foreach ($feedbacks as $row) {
+                    echo "<tr>";
+                    echo "<td>" . htmlspecialchars($row['name']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['email']) . "</td>";
+                    echo "<td>" . htmlspecialchars($row['comment']) . "</td>";
+                    echo "<td>" . $row['submitted_at'] . "</td>";
+                    echo "</tr>";
+                }
+
+            } else {
+                echo "No feedback has been submitted yet";
+            }
+
+        } catch (PDOException $e) {
+            echo "<p>Error loading feedback.</p>";
+        }
+    
+    ?>
+    
+
+
 </body>
 </html>
